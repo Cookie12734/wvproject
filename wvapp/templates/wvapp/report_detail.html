@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% load datetime_filters %}
+
+{% block title %}通報詳細 #{{ report.pk }} - VALORANT募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- ステータスバナー -->
+        {% if not report.is_resolved %}
+        <div class="alert alert-danger d-flex align-items-center mb-4">
+            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+            <div>
+                <strong>この通報は未対応です</strong>
+                <div class="small">内容を確認し、適切な対応を行ってください。</div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert -success d-flex align-items-center mb-4">
+            <i class="bi bi-check-circle-fill fs-4 me-3"></i>
+            <div>
+                <strong>対応済み</strong>
+                <div class="small">{{ report.resolved_by.username }}が{{ report.resolved_at|discord_datetime }}に対応</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 通報概要 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="bi bi-flag-fill text-warning"></i> 通報 #{{ report.pk }}</h4>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.05);">
+                            <small class="text-muted d-block mb-1">通報タイプ</small>
+                            {% if report.report_type == 'recruitment' %}
+                            <span class="badge bg-primary fs-6">📝 募集への通報</span>
+                            {% elif report.report_type == 'comment' %}
+                            <span class="badge bg-info fs-6">💬 コメントへの通報</span>
+                            {% else %}
+                            <span class="badge bg-secondary fs-6">👤 ユーザーへの通報</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.05);">
+                            <small class="text-muted d-block mb-1">通報理由</small>
+                            <span class="badge bg-warning text-dark fs-6">{{ report.get_reason_display }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.05);">
+                            <small class="text-muted d-block mb-1">通報者</small>
+                            <span class="fs-5"><i class="bi bi-person"></i> {{ report.reporter.username }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: rgba(255,70,85,0.1);">
+                            <small class="text-muted d-block mb-1">対象ユーザー</small>
+                            <span class="fs-5 fw-bold"><i class="bi bi-person-exclamation"></i> {{ report.reported_user.username }}</span>
+                            {% if report.reported_user.is_write_banned %}
+                            <span class="badge bg-danger ms-2">BAN中</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.05);">
+                            <small class="text-muted d-block mb-1">通報日時</small>
+                            <span><i class="bi bi-calendar-event"></i> {{ report.created_at|discord_datetime }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if report.detail %}
+                <div class="mt-4">
+                    <h6 class="text-muted mb-2"><i class="bi bi-chat-quote"></i> 通報者からの詳細</h6>
+                    <div class="p-3 rounded border" style="white-space: pre-wrap;">{{ report.detail }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 通報対象の内容 -->
+        {% if report.recruitment %}
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary bg-opacity-25">
+                <h5 class="mb-0"><i class="bi bi-file-text"></i> 通報された募集</h5>
+            </div>
+            <div class="card-body">
+                <h5 class="mb-3">{{ report.recruitment.title }}</h5>
+                <div class="p-3 rounded mb-3" style="background: rgba(255,255,255,0.05); white-space: pre-wrap;">{{ report.recruitment.description }}</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-clock"></i> {{ report.recruitment.created_at|discord_datetime }}
+                    </small>
+                    <a href="{% url 'wvapp:detail' report.recruitment.pk %}" class="btn btn-outline-primary" target="_blank">
+                        <i class="bi bi-box-arrow-up-right"></i> 募集ページを開く
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if report.comment %}
+        <div class="card mb-4 border-info">
+            <div class="card-header bg-info bg-opacity-25">
+                <h5 class="mb-0"><i class="bi bi-chat-dots"></i> 通報されたコメント</h5>
+            </div>
+            <div class="card-body">
+                <div class="p-3 rounded mb-3" style="background: rgba(255,255,255,0.05); white-space: pre-wrap;">{{ report.comment.content }}</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-clock"></i> {{ report.comment.created_at|discord_datetime }}
+                        <span class="ms-2"><i class="bi bi-file-text"></i> {{ report.comment.recruitment.title }}</span>
+                    </small>
+                    <a href="{% url 'wvapp:detail' report.comment.recruitment.pk %}" class="btn btn-outline-info" target="_blank">
+                        <i class="bi bi-box-arrow-up-right"></i> 募集ページを開く
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if report.report_type == 'user' %}
+        <div class="card mb-4 border-secondary">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0"><i class="bi bi-person-exclamation"></i> ユーザーへの直接通報</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center py-4">
+                    <div class="rounded-circle bg-danger bg-opacity-25 d-inline-flex align-items-center justify-content-center mb-3" style="width: 100px; height: 100px;">
+                        <i class="bi bi-person-fill fs-1 text-danger"></i>
+                    </div>
+                    <h4 class="mb-2">{{ report.reported_user.username }}</h4>
+                    <p class="text-muted mb-3">このユーザー自体が通報されています</p>
+                    {% if report.reported_user.is_write_banned %}
+                    <span class="badge bg-danger fs-6 px-3 py-2">🚫 現在BAN中</span>
+                    {% else %}
+                    <span class="badge bg-secondary fs-6 px-3 py-2">✓ 現在正常</span>
+                    {% endif %}
+                </div>
+                <div class="alert alert-info mb-0 mt-3">
+                    <i class="bi bi-info-circle"></i> 
+                    ユーザーへの直接通報は、募集やコメントとは別にユーザーの行動全般に問題がある場合に行われます。
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 対応情報（対応済みの場合） -->
+        {% if report.is_resolved and report.resolution_note %}
+        <div class="card mb-4 border-success">
+            <div class="card-header bg-success bg-opacity-25">
+                <h5 class="mb-0"><i class="bi bi-journal-check"></i> 対応メモ</h5>
+            </div>
+            <div class="card-body">
+                <div style="white-space: pre-wrap;">{{ report.resolution_note }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 対応フォーム -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-tools"></i> 対応操作</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'wvapp:report_resolve' report.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label"><i class="bi bi-pencil"></i> 対応メモ（任意）</label>
+                        <textarea name="resolution_note" class="form-control" rows="3" placeholder="どのような対応を行ったか記録しておくと便利です">{{ report.resolution_note }}</textarea>
+                    </div>
+                    
+                    {% if not report.is_resolved %}
+                    <button type="submit" name="action" value="resolve" class="btn btn-success btn-lg">
+                        <i class="bi bi-check-circle"></i> 対応済みにする
+                    </button>
+                    {% else %}
+                    <button type="submit" name="action" value="unresolve" class="btn btn-outline-warning btn-lg">
+                        <i class="bi bi-arrow-counterclockwise"></i> 未対応に戻す
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- 対象ユーザー情報 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person-badge"></i> 対象ユーザー</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                        <i class="bi bi-person-fill fs-1"></i>
+                    </div>
+                    <h5 class="mt-2 mb-0">{{ report.reported_user.username }}</h5>
+                    {% if report.reported_user.is_write_banned %}
+                    <span class="badge bg-danger mt-2">🚫 BAN中</span>
+                    {% else %}
+                    <span class="badge bg-success mt-2">✓ 正常</span>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <div class="small">
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">登録日</span>
+                        <span>{{ report.reported_user.date_joined|date:"Y/m/d" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">受けた通報</span>
+                        <span class="fw-bold {% if report.reported_user.received_reports.count > 0 %}text-warning{% endif %}">
+                            {{ report.reported_user.received_reports.count }}件
+                        </span>
+                    </div>
+                    {% with rating=report.reported_user.get_rating_percentage %}
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="text-muted">評価</span>
+                        {% if rating is not None %}
+                        <span class="badge bg-{% if rating >= 70 %}success{% elif rating >= 40 %}warning{% else %}danger{% endif %}">
+                            {{ rating }}%
+                        </span>
+                        {% else %}
+                        <span class="text-muted">なし</span>
+                        {% endif %}
+                    </div>
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 対応 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> 対応</h5>
+            </div>
+            <div class="card-body d-grid gap-2">
+                <a href="{% url 'wvapp:user_manage' report.reported_user.pk %}" class="btn btn-primary">
+                    <i class="bi bi-person-gear"></i> ユーザーを管理
+                </a>
+                <a href="{% url 'accounts:chat_with' report.reported_user.pk %}" class="btn btn-outline-success">
+                    <i class="bi bi-chat-dots"></i> 連絡する
+                </a>
+                {% if report.recruitment %}
+                <a href="{% url 'wvapp:detail' report.recruitment.pk %}" class="btn btn-outline-primary" target="_blank">
+                    <i class="bi bi-eye"></i> 募集を見る
+                </a>
+                {% endif %}
+                {% if report.comment %}
+                <a href="{% url 'wvapp:detail' report.comment.recruitment.pk %}" class="btn btn-outline-info" target="_blank">
+                    <i class="bi bi-eye"></i> コメントを見る
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ナビゲーション -->
+        <div class="card">
+            <div class="card-body d-grid">
+                <a href="{% url 'wvapp:report_list' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left"></i> 通報一覧へ戻る
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

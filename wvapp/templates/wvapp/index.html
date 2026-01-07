@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load datetime_filters %}
+
+{% block title %}募集一覧 - ゲーム募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-list-ul"></i> 募集一覧</h1>
+            {% if user.is_authenticated %}
+            <a href="{% url 'wvapp:create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> 新規募集を作成
+            </a>
+            {% endif %}
+        </div>
+        
+        <!-- フィルター -->
+        <div class="card mb-4">
+            <div class="card-body py-2">
+                <!-- 検索フォーム -->
+                <form method="get" class="mb-3">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="検索..." value="{{ search_query }}">
+                        <input type="hidden" name="sort" value="{{ current_sort }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> 検索
+                        </button>
+                        {% if search_query %}
+                        <a href="?sort={{ current_sort }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> クリア
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+                {% if search_query %}
+                <div class="alert alert-info py-2 mb-3">
+                    <i class="bi bi-info-circle"></i> 「{{ search_query }}」の検索結果: {{ page_obj.paginator.count }}件
+                </div>
+                {% endif %}
+                <!-- 並べ替え -->
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <span class="text-muted me-2"><i class="bi bi-sort-down"></i> 並べ替え:</span>
+                    <a href="?sort=newest{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-sm {% if current_sort == 'newest' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                        <i class="bi bi-clock"></i> 新しい順
+                    </a>
+                    <a href="?sort=oldest{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-sm {% if current_sort == 'oldest' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                        <i class="bi bi-clock-history"></i> 古い順
+                    </a>
+                    <a href="?sort=good_rate{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-sm {% if current_sort == 'good_rate' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                        <i class="bi bi-hand-thumbs-up"></i> Good率順
+                    </a>
+                    <a href="?sort=rating_count{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-sm {% if current_sort == 'rating_count' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                        <i class="bi bi-star"></i> 評価数順
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        {% if recruitments %}
+        <div class="list-group">
+            {% for recruitment in recruitments %}
+            <a href="{% url 'wvapp:detail' recruitment.pk %}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ recruitment.title }}</h5>
+                    <small class="text-muted">{{ recruitment.created_at|discord_datetime }}</small>
+                </div>
+                <p class="mb-1 text-truncate">{{ recruitment.description }}</p>
+                <small class="text-muted">
+                    <i class="bi bi-person"></i> <span class="user-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='{% url 'accounts:user_profile' recruitment.user.pk %}'">{{ recruitment.user.username }}</span>{% if recruitment.user.is_staff or recruitment.user.is_superuser %}<span class="badge bg-warning text-dark ms-1" style="font-size: 0.7em;">管理者</span>{% endif %}
+                    {% with rating=recruitment.user.get_rating_percentage %}
+                    {% if rating is not None %}
+                    <span class="badge bg-{% if rating >= 70 %}success{% elif rating >= 40 %}warning{% else %}danger{% endif %} rating-badge">
+                        <i class="bi bi-hand-thumbs-up"></i> {{ rating }}%
+                    </span>
+                    {% endif %}
+                    {% endwith %}
+                    <span class="ms-2"><i class="bi bi-chat"></i> {{ recruitment.comments.count }}</span>
+                </small>
+            </a>
+            {% endfor %}
+        </div>
+        
+        <!-- ページネーション -->
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                <!-- 最初へ -->
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?sort={{ current_sort }}&page=1{% if search_query %}&q={{ search_query }}{% endif %}" title="最初のページ">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?sort={{ current_sort }}&page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" title="前のページ">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="bi bi-chevron-double-left"></i></span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                </li>
+                {% endif %}
+                
+                <!-- ページ番号 -->
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num == 1 or num == page_obj.paginator.num_pages or num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?sort={{ current_sort }}&page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                <!-- 最後へ -->
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?sort={{ current_sort }}&page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" title="次のページ">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?sort={{ current_sort }}&page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}" title="最後のページ">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="bi bi-chevron-double-right"></i></span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        <p class="text-center text-muted small mt-2">
+            {{ page_obj.paginator.count }}件中 {{ page_obj.start_index }}-{{ page_obj.end_index }}件を表示
+        </p>
+        {% endif %}
+        
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> まだ募集がありません。
+            {% if user.is_authenticated %}
+            最初の募集を作成してみましょう！
+            {% else %}
+            ログインして募集を作成してみましょう！
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

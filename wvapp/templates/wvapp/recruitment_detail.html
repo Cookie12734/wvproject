@@ -1,0 +1,508 @@
+{% extends 'base.html' %}
+{% load datetime_filters %}
+
+{% block title %}{{ recruitment.title }} - VALORANT募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- 募集詳細 -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ recruitment.title }}</h4>
+                <div>
+                    {% if user == recruitment.user %}
+                    <a href="{% url 'wvapp:edit' recruitment.pk %}" class="btn btn-sm btn-edit">
+                        <i class="bi bi-pencil"></i> 編集
+                    </a>
+                    <a href="{% url 'wvapp:delete' recruitment.pk %}" class="btn btn-sm btn-delete">
+                        <i class="bi bi-trash"></i> 削除
+                    </a>
+                    {% endif %}
+                    {% if user.is_authenticated and user != recruitment.user %}
+                    <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#reportRecruitmentModal">
+                        <i class="bi bi-flag"></i> 通報
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="card-text" style="white-space: pre-wrap;">{{ recruitment.description }}</p>
+            </div>
+            <div class="card-footer text-muted">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-person"></i> 
+                        <a href="{% url 'accounts:user_profile' recruitment.user.pk %}" class="user-name text-decoration-none" data-user-id="{{ recruitment.user.pk }}">
+                            {{ recruitment.user.username }}
+                        </a>{% if recruitment.user.is_staff or recruitment.user.is_superuser %}<span class="badge bg-warning text-dark ms-1" style="font-size: 0.7em;">管理者</span>{% endif %}
+                        <span class="rating-display" data-user-id="{{ recruitment.user.pk }}">
+                            {% with rating=recruitment.user.get_rating_percentage %}
+                            {% if rating is not None %}
+                            <span class="badge bg-{% if rating >= 70 %}success{% elif rating >= 40 %}warning{% else %}danger{% endif %} rating-badge">
+                                <i class="bi bi-hand-thumbs-up"></i> <span class="rating-value">{{ rating }}</span>%
+                            </span>
+                            {% endif %}
+                            {% endwith %}
+                        </span>
+                        <!-- 評価ボタン（ログインユーザーかつ自分以外に表示） -->
+                        {% if user.is_authenticated and user != recruitment.user %}
+                        <button class="rating-btn text-success" data-bs-toggle="modal" data-bs-target="#ratingModal{{ recruitment.user.pk }}" data-rating-type="good" title="グッド">
+                            <i class="bi bi-hand-thumbs-up-fill"></i>
+                        </button>
+                        <button class="rating-btn text-danger" data-bs-toggle="modal" data-bs-target="#ratingModal{{ recruitment.user.pk }}" data-rating-type="bad" title="バッド">
+                            <i class="bi bi-hand-thumbs-down-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-link text-warning p-0 ms-2" data-bs-toggle="modal" data-bs-target="#reportUserModal{{ recruitment.user.pk }}" title="ユーザーを通報">
+                            <i class="bi bi-person-exclamation"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                    <small>
+                        投稿: {{ recruitment.created_at|discord_datetime }}
+                        {% if recruitment.updated_at != recruitment.created_at %}
+                        | 更新: {{ recruitment.updated_at|discord_datetime }}
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- コメントセクション -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-chat-dots"></i> コメント ({{ comments.count }})</h5>
+            </div>
+            <div class="card-body">
+                {% if comments %}
+                {% for comment in comments %}
+                <div class="border-bottom pb-3 mb-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong>
+                                <i class="bi bi-person"></i> <a href="{% url 'accounts:user_profile' comment.user.pk %}" class="text-decoration-none">{{ comment.user.username }}</a>{% if comment.user.is_staff or comment.user.is_superuser %}<span class="badge bg-warning text-dark ms-1" style="font-size: 0.7em;">管理者</span>{% endif %}
+                            </strong>
+                            <span class="rating-display" data-user-id="{{ comment.user.pk }}">
+                                {% with rating=comment.user.get_rating_percentage %}
+                                {% if rating is not None %}
+                                <span class="badge bg-{% if rating >= 70 %}success{% elif rating >= 40 %}warning{% else %}danger{% endif %} rating-badge">
+                                    <i class="bi bi-hand-thumbs-up"></i> <span class="rating-value">{{ rating }}</span>%
+                                </span>
+                                {% endif %}
+                                {% endwith %}
+                            </span>
+                            <!-- 評価ボタン（ログインユーザーかつ自分以外に表示） -->
+                            {% if user.is_authenticated and user != comment.user %}
+                            <button class="rating-btn text-success" data-bs-toggle="modal" data-bs-target="#ratingModal{{ comment.user.pk }}" data-rating-type="good" title="グッド">
+                                <i class="bi bi-hand-thumbs-up-fill"></i>
+                            </button>
+                            <button class="rating-btn text-danger" data-bs-toggle="modal" data-bs-target="#ratingModal{{ comment.user.pk }}" data-rating-type="bad" title="バッド">
+                                <i class="bi bi-hand-thumbs-down-fill"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-link text-warning p-0 ms-2" data-bs-toggle="modal" data-bs-target="#reportCommentModal{{ comment.pk }}" title="コメントを通報">
+                                <i class="bi bi-flag"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-link text-warning p-0 ms-1" data-bs-toggle="modal" data-bs-target="#reportUserModal{{ comment.user.pk }}" title="ユーザーを通報">
+                                <i class="bi bi-person-exclamation"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center">
+                            {% if user.is_authenticated and user == comment.user %}
+                            <button type="button" class="btn btn-sm btn-link text-primary p-0 me-2" data-bs-toggle="modal" data-bs-target="#editCommentModal{{ comment.pk }}" title="編集">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            {% endif %}
+                            {% if user.is_authenticated and user == comment.user or user.is_staff %}
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0 me-2" data-bs-toggle="modal" data-bs-target="#deleteCommentModal{{ comment.pk }}" title="削除">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            {% endif %}
+                            <small class="text-muted">
+                                {{ comment.created_at|discord_datetime }}
+                                {% if comment.is_edited %}<span class="ms-1 text-info" title="編集日時: {{ comment.updated_at|discord_datetime }}"><i class="bi bi-pencil-fill"></i> 編集済</span>{% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    <p class="mt-2 mb-0 comment-content-{{ comment.pk }}" style="white-space: pre-wrap;">{{ comment.content }}</p>
+                </div>
+
+                <!-- コメント編集モーダル -->
+                {% if user.is_authenticated and user == comment.user %}
+                <div class="modal fade" id="editCommentModal{{ comment.pk }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="bi bi-pencil"></i> コメントを編集</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">コメント内容</label>
+                                    <textarea class="form-control" id="editCommentContent{{ comment.pk }}" rows="4">{{ comment.content }}</textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                                <button type="button" class="btn btn-primary" onclick="updateComment({{ comment.pk }})">
+                                    <i class="bi bi-check-lg"></i> 保存
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- コメント削除確認モーダル（自分のコメントまたは管理者用） -->
+                {% if user.is_authenticated and user == comment.user or user.is_staff %}
+                <div class="modal fade" id="deleteCommentModal{{ comment.pk }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="bi bi-trash"></i> コメントを削除</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>このコメントを削除しますか？</p>
+                                {% if user != comment.user %}
+                                <div class="alert alert-warning small mb-2">
+                                    <i class="bi bi-shield-exclamation"></i> 管理者権限で他ユーザーのコメントを削除します
+                                </div>
+                                {% endif %}
+                                <div class="card">
+                                    <div class="card-body small text-muted" style="white-space: pre-wrap;">{{ comment.content }}</div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                                <form method="post" action="{% url 'wvapp:comment_delete' comment.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="bi bi-trash"></i> 削除
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- コメント通報モーダル -->
+                {% if user.is_authenticated and user != comment.user %}
+                <div class="modal fade" id="reportCommentModal{{ comment.pk }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="bi bi-flag"></i> コメントを通報</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="post" action="{% url 'wvapp:report' 'comment' comment.pk %}">
+                                {% csrf_token %}
+                                <div class="modal-body">
+                                    <p class="text-muted small">通報対象: {{ comment.user.username }}さんのコメント</p>
+                                    <div class="mb-3">
+                                        <label class="form-label">通報理由</label>
+                                        {{ report_form.reason }}
+                                    </div>
+                                    <div class="mb-3">
+                                        {{ report_form.detail.label_tag }}
+                                        {{ report_form.detail }}
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                                    <button type="submit" class="btn btn-warning"><i class="bi bi-flag"></i> 通報する</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- コメント投稿者へのユーザー通報モーダル -->
+                <div class="modal fade" id="reportUserModal{{ comment.user.pk }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="bi bi-person-exclamation"></i> ユーザーを通報</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="post" action="{% url 'wvapp:report' 'user' comment.user.pk %}">
+                                {% csrf_token %}
+                                <div class="modal-body">
+                                    <p class="text-muted small">通報対象ユーザー: {{ comment.user.username }}</p>
+                                    <div class="mb-3">
+                                        <label class="form-label">通報理由</label>
+                                        {{ report_form.reason }}
+                                    </div>
+                                    <div class="mb-3">
+                                        {{ report_form.detail.label_tag }}
+                                        {{ report_form.detail }}
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                                    <button type="submit" class="btn btn-warning"><i class="bi bi-person-exclamation"></i> 通報する</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 評価モーダル（コメント投稿者用） -->
+                <div class="modal fade" id="ratingModal{{ comment.user.pk }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="ratingModalTitle{{ comment.user.pk }}"><i class="bi bi-star"></i> 評価する</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted small">評価対象: {{ comment.user.username }}</p>
+                                <input type="hidden" id="ratingIsGood{{ comment.user.pk }}" value="true">
+                                <div class="mb-3">
+                                    <label class="form-label">評価理由（任意）</label>
+                                    <textarea class="form-control" id="ratingReason{{ comment.user.pk }}" rows="3" placeholder="評価の理由を入力してください（任意）"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                                <button type="button" class="btn btn-primary" onclick="submitRating({{ comment.user.pk }})"><i class="bi bi-check-lg"></i> 評価する</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+                {% else %}
+                <p class="text-muted">まだコメントはありません。</p>
+                {% endif %}
+
+                <!-- コメント投稿フォーム -->
+                {% if user.is_authenticated %}
+                    {% if user.is_write_banned %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i> <strong>現在、書き込みが禁止されています。</strong>
+                        <div class="small mt-1">{{ user.get_ban_status }}</div>
+                        {% if user.ban_reason %}
+                        <hr class="my-2">
+                        <div class="small"><strong>理由:</strong> {{ user.ban_reason }}</div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <hr>
+                    <h6>コメントを投稿</h6>
+                    <form method="post" action="{% url 'wvapp:comment' recruitment.pk %}">
+                        {% csrf_token %}
+                        {{ comment_form.content }}
+                        <button type="submit" class="btn btn-primary mt-2">
+                            <i class="bi bi-send"></i> 投稿
+                        </button>
+                    </form>
+                    {% endif %}
+                {% else %}
+                <hr>
+                <p class="text-muted">
+                    コメントを投稿するには<a href="{% url 'accounts:login' %}">ログイン</a>してください。
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-arrow-left"></i> 戻る</h5>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'wvapp:index' %}" class="btn btn-outline-secondary w-100">
+                    募集一覧へ戻る
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 募集通報モーダル -->
+{% if user.is_authenticated and user != recruitment.user %}
+<div class="modal fade" id="reportRecruitmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-flag"></i> 募集を通報</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'wvapp:report' 'recruitment' recruitment.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-muted small">通報対象: {{ recruitment.title }}</p>
+                    <div class="mb-3">
+                        <label class="form-label">通報理由</label>
+                        {{ report_form.reason }}
+                    </div>
+                    <div class="mb-3">
+                        {{ report_form.detail.label_tag }}
+                        {{ report_form.detail }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-flag"></i> 通報する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 募集投稿者へのユーザー通報モーダル -->
+<div class="modal fade" id="reportUserModal{{ recruitment.user.pk }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-exclamation"></i> ユーザーを通報</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'wvapp:report' 'user' recruitment.user.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-muted small">通報対象ユーザー: {{ recruitment.user.username }}</p>
+                    <div class="mb-3">
+                        <label class="form-label">通報理由</label>
+                        {{ report_form.reason }}
+                    </div>
+                    <div class="mb-3">
+                        {{ report_form.detail.label_tag }}
+                        {{ report_form.detail }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-person-exclamation"></i> 通報する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 評価モーダル（募集投稿者用） -->
+<div class="modal fade" id="ratingModal{{ recruitment.user.pk }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ratingModalTitle{{ recruitment.user.pk }}"><i class="bi bi-star"></i> 評価する</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">評価対象: {{ recruitment.user.username }}</p>
+                <input type="hidden" id="ratingIsGood{{ recruitment.user.pk }}" value="true">
+                <div class="mb-3">
+                    <label class="form-label">評価理由（任意）</label>
+                    <textarea class="form-control" id="ratingReason{{ recruitment.user.pk }}" rows="3" placeholder="評価の理由を入力してください（任意）"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" onclick="submitRating({{ recruitment.user.pk }})"><i class="bi bi-check-lg"></i> 評価する</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 評価モーダルを開くときに評価タイプを設定
+document.querySelectorAll('[data-rating-type]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const targetModal = this.getAttribute('data-bs-target');
+        const userId = targetModal.replace('#ratingModal', '');
+        const isGood = this.getAttribute('data-rating-type') === 'good';
+        
+        document.getElementById('ratingIsGood' + userId).value = isGood ? 'true' : 'false';
+        
+        const titleEl = document.getElementById('ratingModalTitle' + userId);
+        if (isGood) {
+            titleEl.innerHTML = '<i class="bi bi-hand-thumbs-up-fill text-success"></i> Good評価する';
+        } else {
+            titleEl.innerHTML = '<i class="bi bi-hand-thumbs-down-fill text-danger"></i> Bad評価する';
+        }
+    });
+});
+
+function submitRating(userId) {
+    const isGood = document.getElementById('ratingIsGood' + userId).value;
+    const reason = document.getElementById('ratingReason' + userId).value;
+    
+    fetch(`/user/${userId}/rate/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `is_good=${isGood}&reason=${encodeURIComponent(reason)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // モーダルを閉じる
+            const modal = bootstrap.Modal.getInstance(document.getElementById('ratingModal' + userId));
+            modal.hide();
+            
+            // 該当ユーザーの評価表示を全て更新
+            const ratingDisplays = document.querySelectorAll(`.rating-display[data-user-id="${userId}"]`);
+            ratingDisplays.forEach(display => {
+                if (data.rating_percentage !== null) {
+                    let badgeClass = 'danger';
+                    if (data.rating_percentage >= 70) badgeClass = 'success';
+                    else if (data.rating_percentage >= 40) badgeClass = 'warning';
+                    
+                    display.innerHTML = `<span class="badge bg-${badgeClass} rating-badge">
+                        <i class="bi bi-hand-thumbs-up"></i> <span class="rating-value">${data.rating_percentage}</span>%
+                    </span>`;
+                }
+            });
+            
+            // 理由欄をクリア
+            document.getElementById('ratingReason' + userId).value = '';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('評価の送信に失敗しました。');
+    });
+}
+
+// コメント編集
+function updateComment(commentId) {
+    const content = document.getElementById('editCommentContent' + commentId).value.trim();
+    
+    if (!content) {
+        alert('コメント内容を入力してください。');
+        return;
+    }
+    
+    fetch(`/comment/${commentId}/edit/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `content=${encodeURIComponent(content)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 編集成功後、ページをリロードして編集済の表示を反映
+            location.reload();
+        } else {
+            alert(data.error || 'コメントの編集に失敗しました。');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('コメントの編集に失敗しました。');
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% load datetime_filters %}
+
+{% block title %}マイページ - VALORANT募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- プロフィール情報 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="bi bi-person-circle"></i> マイページ</h4>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <!-- ユーザー情報 -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-transparent">
+                                <h5 class="mb-0"><i class="bi bi-person"></i> ユーザー情報</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">ユーザー名</span>
+                                    <span class="fw-bold">{{ user.username }}{% if user.is_staff or user.is_superuser %}<span class="badge bg-warning text-dark ms-1" style="font-size: 0.7em;">管理者</span>{% endif %}</span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">メールアドレス</span>
+                                    <span>{{ user.email|default:"未設定" }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">登録日</span>
+                                    <span>{{ user.date_joined|date:"Y/m/d" }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">評価</span>
+                                    <span>
+                                        {% with rating=user.get_rating_percentage %}
+                                        {% if rating is not None %}
+                                        <span class="badge bg-{% if rating >= 70 %}success{% elif rating >= 40 %}warning{% else %}danger{% endif %}">
+                                            <i class="bi bi-hand-thumbs-up"></i> {{ rating }}%
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">評価なし</span>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2">
+                                    <span class="text-muted">アカウント状態</span>
+                                    <span>
+                                        {% if user.is_write_banned %}
+                                        <span class="badge bg-danger"><i class="bi bi-exclamation-octagon"></i> BANNED</span>
+                                        {% else %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> 正常</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- アクティビティ -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-transparent">
+                                <h5 class="mb-0"><i class="bi bi-activity"></i> アクティビティ</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">投稿した募集</span>
+                                    <span>
+                                        {% if has_recruitment %}
+                                        <a href="{% url 'wvapp:detail' recruitment.pk %}">1 件</a>
+                                        {% else %}
+                                        0 件
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">投稿したコメント</span>
+                                    <span>{{ comments_count }} 件</span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">受けた評価</span>
+                                    <span>{{ user.received_ratings.count }} 件</span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2">
+                                    <span class="text-muted">未読の通知</span>
+                                    <span>
+                                        <a href="{% url 'accounts:notification_list' %}">
+                                            {{ unread_notification_count }} 件
+                                            {% if unread_notification_count %}
+                                            <i class="bi bi-bell-fill text-danger"></i>
+                                            {% endif %}
+                                        </a>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if user.is_write_banned %}
+                <div class="alert alert-danger mt-4">
+                    <h6 class="alert-heading"><i class="bi bi-exclamation-octagon-fill"></i> BANNED</h6>
+                    <p class="mb-2">{{ user.get_ban_status }}</p>
+                    {% if user.ban_reason %}
+                    <hr>
+                    <p class="mb-0"><strong>理由:</strong> {{ user.ban_reason }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 設定 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="bi bi-gear"></i> 設定</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h5>ユーザー名の変更</h5>
+                    {% if can_change_username %}
+                    <p class="text-muted">ユーザー名を変更できます。（3日に1回まで）</p>
+                    <a href="{% url 'accounts:username_change' %}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i> ユーザー名を変更
+                    </a>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-clock"></i> 
+                        ユーザー名の変更は3日に1回までです。<br>
+                        次回変更可能日時: <strong>{{ next_change_date|discord_datetime }}</strong>
+                    </div>
+                    <button class="btn btn-secondary" disabled>
+                        <i class="bi bi-pencil"></i> ユーザー名を変更
+                    </button>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <div class="mb-4">
+                    <h5>メールアドレスの変更</h5>
+                    <p class="text-muted">パスワードリセット等で使用するメールアドレスを変更できます。</p>
+                    <a href="{% url 'accounts:email_change' %}" class="btn btn-primary">
+                        <i class="bi bi-envelope"></i> メールアドレスを変更
+                    </a>
+                </div>
+                
+                <hr>
+                
+                <div>
+                    <h5>パスワードの変更</h5>
+                    <p class="text-muted">現在のパスワードを入力して、新しいパスワードに変更できます。</p>
+                    <a href="{% url 'accounts:password_change' %}" class="btn btn-primary">
+                        <i class="bi bi-key"></i> パスワードを変更
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 受けた評価一覧 -->
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="bi bi-star"></i> 受けた評価</h4>
+            </div>
+            <div class="card-body">
+                {% if received_ratings %}
+                <div class="list-group list-group-flush">
+                    {% for rating in received_ratings %}
+                    <div class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-1">
+                                {% if rating.is_good %}
+                                <span class="badge bg-success me-2"><i class="bi bi-hand-thumbs-up-fill"></i> Good</span>
+                                {% else %}
+                                <span class="badge bg-danger me-2"><i class="bi bi-hand-thumbs-down-fill"></i> Bad</span>
+                                {% endif %}
+                                <a href="{% url 'accounts:user_profile' rating.rater.pk %}" class="text-decoration-none fw-bold">
+                                    {{ rating.rater.username }}
+                                </a>
+                                {% if rating.rater.is_staff or rating.rater.is_superuser %}
+                                <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65em;">管理者</span>
+                                {% endif %}
+                            </div>
+                            {% if rating.reason %}
+                            <p class="mb-0 small text-muted" style="white-space: pre-wrap;">{{ rating.reason }}</p>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted ms-2">{{ rating.created_at|discord_datetime }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">まだ評価を受けていません。</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-link-45deg"></i>リンク</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'wvapp:my_recruitment' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-list-ul"></i> 自分の募集
+                    </a>
+                    <a href="{% url 'wvapp:create' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-plus-lg"></i> 新規募集を作成
+                    </a>
+                    <a href="{% url 'accounts:chat_list' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-chat-dots"></i> チャット
+                    </a>
+                    <a href="{% url 'wvapp:index' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-house"></i> トップページへ
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-shield"></i> プライバシー</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'accounts:block_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-slash-circle"></i> ブロックリスト
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-danger">
+                <h5 class="mb-0 text-white"><i class="bi bi-exclamation-triangle"></i> 危険な操作</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'accounts:account_delete' %}" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i> アカウントを削除
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

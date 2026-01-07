@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}募集作成完了 - ゲーム募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                <h3 class="mt-3">募集を作成しました！</h3>
+                <p class="text-muted">募集が正常に作成されました。</p>
+                <div class="d-flex justify-content-center gap-2 mt-4">
+                    <a href="{% url 'wvapp:index' %}" class="btn btn-primary">
+                        募集一覧へ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

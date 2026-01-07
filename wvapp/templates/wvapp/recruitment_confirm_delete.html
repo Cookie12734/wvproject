@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}募集を削除 - ゲーム募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> 募集を削除</h4>
+            </div>
+            <div class="card-body">
+                <p>以下の募集を削除してもよろしいですか？</p>
+                <div class="alert alert-warning">
+                    <strong>{{ object.title }}</strong>
+                </div>
+                <p class="text-danger"><small>この操作は取り消せません。関連するコメントも全て削除されます。</small></p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> 削除する
+                        </button>
+                        <a href="{% url 'wvapp:detail' object.pk %}" class="btn btn-outline-secondary">
+                            キャンセル
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

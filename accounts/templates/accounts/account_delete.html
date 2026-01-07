@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}アカウント削除 - VALORANT募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> アカウント削除</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h5 class="alert-heading"><i class="bi bi-exclamation-octagon-fill"></i> 警告</h5>
+                    <p class="mb-0">アカウントを削除すると、以下のデータが<strong>すべて削除</strong>され、<strong>復元できません</strong>。</p>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-transparent">
+                        <h6 class="mb-0"><i class="bi bi-trash"></i> 削除されるデータ</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            <li>アカウント情報（ユーザー名、メールアドレス等）</li>
+                            <li>投稿した募集</li>
+                            <li>投稿したコメント</li>
+                            <li>チャット履歴</li>
+                            <li>評価履歴（あなたが行った評価・受けた評価）</li>
+                            <li>ブロックリスト</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="password" class="form-label">パスワードを入力して確認</label>
+                        <input type="password" class="form-control" id="password" name="password" required placeholder="現在のパスワード">
+                        <div class="form-text">本人確認のため、パスワードを入力してください。</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('本当にアカウントを削除しますか？この操作は取り消せません。')">
+                            <i class="bi bi-trash"></i> アカウントを削除する
+                        </button>
+                        <a href="{% url 'accounts:mypage' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> キャンセル
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

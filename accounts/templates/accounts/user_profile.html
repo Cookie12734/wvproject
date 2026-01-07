@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% load datetime_filters %}
+
+{% block title %}{{ profile_user.username }}のプロフィール - VALORANT募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- プロフィール情報 -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-person-circle"></i> {{ profile_user.username }}のプロフィール</h4>
+                {% if is_own_profile %}
+                <a href="{% url 'accounts:mypage' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-gear"></i> マイページ
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <!-- ユーザー情報 -->
+                    <div class="col-md-4 text-center">
+                        <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center mb-3" style="width: 120px; height: 120px;">
+                            <i class="bi bi-person-fill" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4 class="mb-2">{{ profile_user.username }}{% if profile_user.is_staff or profile_user.is_superuser %}<span class="badge bg-warning text-dark ms-2" style="font-size: 0.6em;">管理者</span>{% endif %}</h4>
+                        {% with rating=profile_user.get_rating_percentage %}
+                        {% if rating is not None %}
+                        <span class="badge bg-{% if rating >= 70 %}success{% elif rating >= 40 %}warning{% else %}danger{% endif %} fs-5">
+                            <i class="bi bi-hand-thumbs-up"></i> {{ rating }}%
+                        </span>
+                        {% else %}
+                        <span class="text-muted">評価なし</span>
+                        {% endif %}
+                        {% endwith %}
+                        
+                        <!-- 評価ボタン（ログインユーザーかつ自分以外に表示） -->
+                        {% if user.is_authenticated and user != profile_user %}
+                        <div class="mt-3">
+                            <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#ratingModal" data-rating-type="good" title="good">
+                                <i class="bi bi-hand-thumbs-up-fill"></i> Good
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#ratingModal" data-rating-type="bad" title="bad">
+                                <i class="bi bi-hand-thumbs-down-fill"></i> Bad
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <div class="card h-100">
+                            <div class="card-header bg-transparent">
+                                <h5 class="mb-0"><i class="bi bi-info-circle"></i> ユーザー情報</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">登録日</span>
+                                    <span>{{ profile_user.date_joined|date:"Y/m/d" }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">投稿した募集</span>
+                                    <span>
+                                        {% if has_recruitment %}
+                                        <a href="{% url 'wvapp:detail' recruitment.pk %}">1 件</a>
+                                        {% else %}
+                                        0 件
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">投稿したコメント</span>
+                                    <span>{{ comments_count }} 件</span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">受けた評価</span>
+                                    <span>{{ ratings_count }} 件</span>
+                                </div>
+                                <div class="d-flex justify-content-between py-2">
+                                    <span class="text-muted">アカウント状態</span>
+                                    <span>
+                                        {% if profile_user.is_write_banned %}
+                                        <span class="badge bg-danger"><i class="bi bi-exclamation-octagon"></i> BANNED</span>
+                                        {% else %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> 正常</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 募集情報 -->
+        {% if has_recruitment %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-file-text"></i> 投稿中の募集</h5>
+            </div>
+            <div class="card-body">
+                <h5>{{ recruitment.title }}</h5>
+                <p class="text-truncate mb-2">{{ recruitment.description }}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-clock"></i> {{ recruitment.created_at|discord_datetime }}
+                        <span class="ms-2"><i class="bi bi-chat"></i> {{ recruitment.comments.count }}</span>
+                    </small>
+                    <a href="{% url 'wvapp:detail' recruitment.pk %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-eye"></i> 詳細を見る
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 受けた評価一覧 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-star"></i> 受けた評価</h5>
+            </div>
+            <div class="card-body">
+                {% if received_ratings %}
+                <div class="list-group list-group-flush">
+                    {% for rating in received_ratings %}
+                    <div class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-1">
+                                {% if rating.is_good %}
+                                <span class="badge bg-success me-2"><i class="bi bi-hand-thumbs-up-fill"></i> Good</span>
+                                {% else %}
+                                <span class="badge bg-danger me-2"><i class="bi bi-hand-thumbs-down-fill"></i> Bad</span>
+                                {% endif %}
+                                <a href="{% url 'accounts:user_profile' rating.rater.pk %}" class="text-decoration-none fw-bold">
+                                    {{ rating.rater.username }}
+                                </a>
+                                {% if rating.rater.is_staff or rating.rater.is_superuser %}
+                                <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65em;">管理者</span>
+                                {% endif %}
+                            </div>
+                            {% if rating.reason %}
+                            <p class="mb-0 small text-muted" style="white-space: pre-wrap;">{{ rating.reason }}</p>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted ms-2">{{ rating.created_at|discord_datetime }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">まだ評価を受けていません。</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- アクション -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> アクション</h5>
+            </div>
+            <div class="card-body d-grid gap-2">
+                {% if user.is_authenticated and user != profile_user %}
+                    {% if is_blocked_by %}
+                    <div class="alert alert-warning mb-2">
+                        <i class="bi bi-slash-circle"></i> このユーザーにブロックされています
+                    </div>
+                    {% elif is_blocked %}
+                    <div class="alert alert-secondary mb-2">
+                        <i class="bi bi-slash-circle"></i> ブロック中
+                    </div>
+                    <form method="post" action="{% url 'accounts:unblock_user' profile_user.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-success w-100">
+                            <i class="bi bi-unlock"></i> ブロック解除
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'accounts:chat_with' profile_user.pk %}" class="btn btn-primary">
+                        <i class="bi bi-chat-dots"></i> チャットする
+                    </a>
+                    {% endif %}
+                <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#reportUserModal">
+                    <i class="bi bi-flag"></i> 通報する
+                </button>
+                    {% if not is_blocked %}
+                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#blockUserModal">
+                    <i class="bi bi-slash-circle"></i> ブロック
+                </button>
+                    {% endif %}
+                {% elif not user.is_authenticated %}
+                <a href="{% url 'accounts:login' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-box-arrow-in-right"></i> ログインしてアクションする
+                </a>
+                {% endif %}
+                
+                {% if user.is_staff %}
+                <hr>
+                <a href="{% url 'wvapp:user_manage' profile_user.pk %}" class="btn btn-outline-danger">
+                    <i class="bi bi-person-gear"></i> ユーザーを管理
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ナビゲーション -->
+        <div class="card">
+            <div class="card-body d-grid gap-2">
+                <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 戻る
+                </a>
+                <a href="{% url 'wvapp:index' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-house"></i> トップページへ
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ユーザー通報モーダル -->
+{% if user.is_authenticated and user != profile_user %}
+<div class="modal fade" id="reportUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-exclamation"></i> ユーザーを通報</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'wvapp:report' 'user' profile_user.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-muted small">通報対象ユーザー: {{ profile_user.username }}</p>
+                    <div class="mb-3">
+                        <label class="form-label">通報理由</label>
+                        <select name="reason" class="form-select" required>
+                            <option value="">選択してください</option>
+                            <option value="spam">スパム・宣伝</option>
+                            <option value="harassment">嫌がらせ・誹謗中傷</option>
+                            <option value="inappropriate">不適切な内容</option>
+                            <option value="fraud">詐欺・なりすまし</option>
+                            <option value="other">その他</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">詳細（任意）</label>
+                        <textarea name="detail" class="form-control" rows="3" placeholder="具体的な内容をお書きください"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-person-exclamation"></i> 通報する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ブロック確認モーダル -->
+<div class="modal fade" id="blockUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-slash-circle"></i> ユーザーをブロック</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'accounts:block_user' profile_user.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p><strong>{{ profile_user.username }}</strong> をブロックしますか？</p>
+                    <div class="alert alert-secondary">
+                        <h6 class="alert-heading"><i class="bi bi-info-circle"></i> ブロックすると</h6>
+                        <ul class="mb-0 small">
+                            <li>相手からのチャットメッセージを受け取らなくなります</li>
+                            <li>相手はあなたにチャットを送れなくなります</li>
+                            <li>ブロックはいつでも解除できます</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-slash-circle"></i> ブロックする</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 評価モーダル -->
+<div class="modal fade" id="ratingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ratingModalTitle"><i class="bi bi-star"></i> 評価する</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">評価対象: {{ profile_user.username }}</p>
+                <input type="hidden" id="ratingIsGood" value="true">
+                <div class="mb-3">
+                    <label class="form-label">評価理由（任意）</label>
+                    <textarea class="form-control" id="ratingReason" rows="3" placeholder="評価の理由を入力してください（任意）"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" onclick="submitRating()"><i class="bi bi-check-lg"></i> 評価する</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 評価モーダルを開くときに評価タイプを設定
+document.querySelectorAll('[data-rating-type]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const isGood = this.getAttribute('data-rating-type') === 'good';
+        document.getElementById('ratingIsGood').value = isGood ? 'true' : 'false';
+        
+        const titleEl = document.getElementById('ratingModalTitle');
+        if (isGood) {
+            titleEl.innerHTML = '<i class="bi bi-hand-thumbs-up-fill text-success"></i> Good評価する';
+        } else {
+            titleEl.innerHTML = '<i class="bi bi-hand-thumbs-down-fill text-danger"></i> Bad評価する';
+        }
+    });
+});
+
+function submitRating() {
+    const userId = {{ profile_user.pk }};
+    const isGood = document.getElementById('ratingIsGood').value;
+    const reason = document.getElementById('ratingReason').value;
+    
+    fetch(`/user/${userId}/rate/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `is_good=${isGood}&reason=${encodeURIComponent(reason)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('評価の送信に失敗しました。');
+    });
+}
+</script>
+{% endblock %}

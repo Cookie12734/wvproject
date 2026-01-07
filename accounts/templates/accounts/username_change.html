@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}ユーザー名の変更 - VALORANT募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="bi bi-pencil"></i> ユーザー名の変更</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    現在のユーザー名: <strong>{{ user.username }}</strong>
+                </p>
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">新しいユーザー名 <span class="text-danger">*</span></label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <div class="text-danger small">{{ form.username.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">
+                            150文字以内。英数字と @/./+/-/_ のみ使用可能。
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        ユーザー名の変更は<strong>3日に1回</strong>までです。
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> 変更する
+                        </button>
+                        <a href="{% url 'accounts:mypage' %}" class="btn btn-outline-secondary">
+                            キャンセル
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

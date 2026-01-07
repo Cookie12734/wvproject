@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load datetime_filters %}
+
+{% block title %}自分の募集 - VALORANT募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-person-lines-fill"></i> 自分の募集</h1>
+        </div>
+        
+        {% if recruitment %}
+        <div class="card mb-4 recruitment-card" onclick="window.location.href='{% url 'wvapp:detail' recruitment.pk %}'" style="cursor: pointer;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ recruitment.title }}</h5>
+                <div onclick="event.stopPropagation();">
+                    <a href="{% url 'wvapp:edit' recruitment.pk %}" class="btn btn-sm btn-edit">
+                        <i class="bi bi-pencil"></i> 編集
+                    </a>
+                    <a href="{% url 'wvapp:delete' recruitment.pk %}" class="btn btn-sm btn-delete">
+                        <i class="bi bi-trash"></i> 削除
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="card-text" style="white-space: pre-wrap;">{{ recruitment.description }}</p>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-secondary">
+                        <i class="bi bi-chat"></i> コメント {{ recruitment.comments.count }}件
+                    </span>
+                    <small class="text-muted">
+                        作成: {{ recruitment.created_at|discord_datetime }}
+                        {% if recruitment.updated_at != recruitment.created_at %}
+                        | 更新: {{ recruitment.updated_at|discord_datetime }}
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> まだ募集を作成していません。
+        </div>
+        
+        {% if user.is_write_banned %}
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i> <strong>現在、書き込みが禁止されているため募集を作成できません。</strong>
+            <div class="small mt-1">{{ user.get_ban_status }}</div>
+            {% if user.ban_reason %}
+            <hr class="my-2">
+            <div class="small"><strong>理由:</strong> {{ user.ban_reason }}</div>
+            {% endif %}
+        </div>
+        {% else %}
+        <a href="{% url 'wvapp:create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> 募集を作成する
+        </a>
+        {% endif %}
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> 募集について</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    <i class="bi bi-exclamation-circle"></i> 募集は1人1件までです。
+                </p>
+                <p class="small text-muted mb-0">
+                    新しい募集を作成するには、現在の募集を削除してください。
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

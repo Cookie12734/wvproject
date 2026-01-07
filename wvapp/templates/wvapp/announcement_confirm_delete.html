@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}お知らせ削除 - VALORANT募集掲示板{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1>お知らせを削除します</h1>
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>{{ object.title }}</h5>
+            <p style="white-space: pre-wrap;">{{ object.content }}</p>
+            <small class="text-muted">{{ object.created_at|date:"Y/m/d H:i" }}</small>
+        </div>
+    </div>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">削除する</button>
+        <a href="{% url 'wvapp:announcement_list' %}" class="btn btn-secondary">キャンセル</a>
+    </form>
+</div>
+{% endblock %}

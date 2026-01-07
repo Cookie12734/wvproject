@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load datetime_filters %}
+
+{% block title %}通報管理 - VALORANT募集掲示板{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- ヘッダー -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-1"><i class="bi bi-shield-exclamation"></i> 通報管理</h2>
+                        <p class="text-muted mb-0">ユーザーからの通報を確認・対応できます</p>
+                    </div>
+                    <div class="text-end">
+                        <div class="fs-4 fw-bold text-danger">{{ unresolved_count }}</div>
+                        <small class="text-muted">未対応</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- フィルター -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-funnel"></i> フィルター</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">ステータス</label>
+                        <select name="status" class="form-select">
+                            <option value="">すべて</option>
+                            <option value="unresolved" {% if current_status == 'unresolved' %}selected{% endif %}>🔴 未対応</option>
+                            <option value="resolved" {% if current_status == 'resolved' %}selected{% endif %}>🟢 対応済み</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">通報タイプ</label>
+                        <select name="type" class="form-select">
+                            <option value="">すべて</option>
+                            <option value="recruitment" {% if current_type == 'recruitment' %}selected{% endif %}>📝 募集</option>
+                            <option value="comment" {% if current_type == 'comment' %}selected{% endif %}>💬 コメント</option>
+                            <option value="user" {% if current_type == 'user' %}selected{% endif %}>👤 ユーザー</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="bi bi-search"></i> 検索
+                        </button>
+                        <a href="{% url 'wvapp:report_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> リセット
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 通報一覧 -->
+        {% if reports %}
+        <div class="row">
+            {% for report in reports %}
+            <div class="col-lg-6 mb-3">
+                <div class="card h-100 recruitment-card {% if not report.is_resolved %}border-danger{% endif %}" onclick="window.location.href='{% url 'wvapp:report_detail' report.pk %}'" style="cursor: pointer;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="fw-bold">#{{ report.pk }}</span>
+                            {% if report.report_type == 'recruitment' %}
+                            <span class="badge bg-primary ms-2">募集</span>
+                            {% elif report.report_type == 'comment' %}
+                            <span class="badge bg-lime ms-2">コメント</span>
+                            {% else %}
+                            <span class="badge bg-secondary ms-2">ユーザー</span>
+                            {% endif %}
+                        </div>
+                        {% if report.is_resolved %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> 対応済み</span>
+                        {% else %}
+                        <span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> 未対応</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <span class="badge bg-warning text-dark">{{ report.get_reason_display }}</span>
+                        </div>
+                        
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <small class="text-muted d-block">通報者</small>
+                                <span>{{ report.reporter.username }}</span>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted d-block">対象ユーザー</small>
+                                <span class="fw-bold">{{ report.reported_user.username }}</span>
+                                {% if report.reported_user.is_write_banned %}
+                                <span class="badge bg-danger">BAN</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if report.detail %}
+                        <div class="mt-2 p-2 rounded" style="background: rgba(255,255,255,0.05);">
+                            <small class="text-muted">{{ report.detail|truncatechars:100 }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <small class="text-muted">
+                            <i class="bi bi-clock"></i> {{ report.created_at|discord_datetime }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- ページネーション -->
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                <h4 class="mt-3 text-muted">通報はありません</h4>
+                <p class="text-muted">該当する通報が見つかりませんでした。</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
