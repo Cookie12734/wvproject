@@ -17,11 +17,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables early
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from django.core.exceptions import ImproperlyConfigured
 
 env_path = BASE_DIR / '.env'
-load_dotenv(env_path)
+# Prefer explicit .env in project root, otherwise try to locate one with find_dotenv()
+if env_path.exists():
+    load_dotenv(str(env_path))
+else:
+    found = find_dotenv()
+    if found:
+        load_dotenv(found)
 
 
 # Quick-start development settings - unsuitable for production
